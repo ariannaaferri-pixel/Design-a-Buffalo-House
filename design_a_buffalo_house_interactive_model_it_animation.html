@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Design a Buffalo House — Part 2: Model It Interactive Animation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+    }
+    .protractor-shadow {
+      filter: drop-shadow(0px 8px 16px rgba(15, 23, 42, 0.22));
+    }
+    .tool-shadow {
+      filter: drop-shadow(0px 4px 8px rgba(15, 23, 42, 0.2));
+    }
+    .pulse-ring {
+      animation: pulseRing 1.6s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+      transform-origin: center;
+      transform-box: fill-box;
+    }
+    @keyframes pulseRing {
+      0% { transform: scale(0.85); opacity: 0.95; }
+      70% { transform: scale(1.75); opacity: 0; }
+      100% { transform: scale(1.75); opacity: 0; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Top Classroom Projector Header -->
+  <header class="bg-slate-900 text-white px-4 py-3 shadow-md border-b border-slate-800">
+    <div class="max-w-[1440px] mx-auto flex flex-col xl:flex-row items-start xl:items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="bg-amber-400 text-slate-950 p-2 rounded-xl font-extrabold text-xl shadow-sm flex items-center justify-center w-10 h-10 shrink-0">
+          ☀️
+        </div>
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <h1 class="text-lg sm:text-xl font-extrabold tracking-tight">Design a Buffalo House: Part 2 Model It</h1>
+            <span class="bg-slate-800 text-amber-300 text-xs font-bold px-2.5 py-0.5 rounded-full border border-slate-700">1 ft → 3 ft → 2 ft Walkthrough</span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-300">Watch how to align the ruler, flip the protractor upside-down, mark 71° &amp; 24°, and draw sun rays</p>
+        </div>
+      </div>
+
+      <!-- Sequence & Trial Quick-Jump Bar -->
+      <div class="flex flex-wrap items-center gap-2 w-full xl:w-auto justify-between xl:justify-end">
+        <button id="btn-play-all" onclick="startFullSequence()" class="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs sm:text-sm shadow transition cursor-pointer flex items-center gap-1.5">
+          <span>▶▶</span> Play Full Demo (1 ft → 3 ft → 2 ft)
+        </button>
+
+        <!-- Direct Trial Tabs -->
+        <div class="flex items-center gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
+          <button id="tab-trial-0" onclick="jumpToTrial(0)" class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer bg-amber-400 text-slate-950">
+            1. 1 ft (Pencil)
+          </button>
+          <button id="tab-trial-1" onclick="jumpToTrial(1)" class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer text-slate-300 hover:bg-slate-700">
+            2. 3 ft (Blue)
+          </button>
+          <button id="tab-trial-2" onclick="jumpToTrial(2)" class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer text-slate-300 hover:bg-slate-700">
+            3. 2 ft (Purple)
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-[1440px] w-full mx-auto p-3 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+
+    <!-- LEFT COLUMN: Interactive House Grid & Tool Animation (7 cols) -->
+    <section class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+      
+      <!-- Live Action Banner -->
+      <div class="bg-slate-50 border-b border-slate-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <span id="trial-badge" class="bg-slate-800 text-white text-xs font-bold px-2.5 py-1 rounded-lg">Trial 1 of 3: 1 ft</span>
+          <span id="substep-badge" class="bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg">Step 1A</span>
+          <span id="live-caption" class="font-bold text-slate-900 text-xs sm:text-sm">Align ruler at 8 ft &amp; draw 1 ft overhang</span>
+        </div>
+
+        <!-- Ghost Trails Toggle -->
+        <label class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer select-none bg-white px-2.5 py-1 rounded-lg border border-slate-300 hover:bg-slate-50">
+          <input id="chk-ghost" type="checkbox" checked onchange="renderScene()" class="rounded text-blue-600 focus:ring-0 cursor-pointer" />
+          <span>Keep previous trial lines</span>
+        </label>
+      </div>
+
+      <!-- SVG Canvas -->
+      <div class="relative w-full bg-white p-2 sm:p-3 flex justify-center items-center select-none">
+        <svg id="house-svg" viewBox="0 0 740 530" class="w-full h-auto max-h-[64vh] rounded-xl border border-slate-100" aria-label="Side View of a Buffalo House">
+          <defs>
+            <!-- Shaded window hatch pattern -->
+            <pattern id="shade-pattern" width="6" height="6" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+              <rect width="6" height="6" fill="#cbd5e1" />
+              <line x1="0" y1="0" x2="0" y2="6" stroke="#475569" stroke-width="2" />
+            </pattern>
+            <!-- Roof shingles -->
+            <pattern id="roof-pattern" width="10" height="16" patternUnits="userSpaceOnUse">
+              <rect width="10" height="16" fill="#64748b" />
+              <line x1="0" y1="16" x2="10" y2="16" stroke="#475569" stroke-width="1.5" />
+            </pattern>
+          </defs>
+
+          <!-- Background -->
+          <rect x="0" y="0" width="740" height="530" fill="#ffffff" />
+
+          <!-- Diagram Title -->
+          <text x="370" y="24" text-anchor="middle" font-size="16" font-weight="800" fill="#0f172a">Side View of a Buffalo House</text>
+
+          <!-- Static Grid Layer -->
+          <g id="grid-layer"></g>
+
+          <!-- Grass Ground (0 ft = y 440) -->
+          <rect x="75" y="440" width="645" height="26" fill="#95b870" />
+          <g id="grass-blades"></g>
+
+          <!-- Direction Footer -->
+          <g font-size="13" font-weight="800" fill="#0f172a">
+            <text x="75" y="490" text-anchor="start">← SOUTH</text>
+            <text x="395" y="490" text-anchor="middle" font-size="12" font-weight="600" fill="#475569">Side view. 1 small square = 0.5 ft (2 squares = 1 ft)</text>
+            <text x="720" y="490" text-anchor="end">NORTH →</text>
+          </g>
+
+          <!-- Noon Sun Icon -->
+          <g transform="translate(115, 82)">
+            <circle cx="0" cy="0" r="24" fill="#facc15" stroke="#1e293b" stroke-width="2" />
+            <text x="34" y="-4" font-size="13" font-weight="700" fill="#1e293b">Noon Sun</text>
+            <text x="34" y="13" font-size="13" font-weight="600" fill="#334155">(to the south)</text>
+          </g>
+
+          <!-- House Structure -->
+          <g id="house-structure">
+            <!-- Chimney -->
+            <rect x="655" y="34" width="24" height="65" fill="#cbd5e1" stroke="#0f172a" stroke-width="2.5" />
+            <!-- Roof -->
+            <polygon points="515,120 618,40 720,120" fill="url(#roof-pattern)" stroke="#0f172a" stroke-width="3" stroke-linejoin="round" />
+            <!-- Interior Box -->
+            <rect x="515" y="120" width="205" height="320" fill="#f3f1ea" stroke="#0f172a" stroke-width="3.5" />
+            <text x="622" y="295" text-anchor="middle" font-size="14" font-weight="700" fill="#1e293b">Inside</text>
+            <text x="622" y="313" text-anchor="middle" font-size="14" font-weight="700" fill="#1e293b">the house</text>
+
+            <!-- Window Frame (3 ft to 7 ft -> y = 160 to 320) -->
+            <rect x="509" y="160" width="12" height="160" fill="#e0f2fe" stroke="#0f172a" stroke-width="2.5" />
+
+            <!-- Dynamic Window Sun/Shade Fill -->
+            <g id="window-lighting-layer"></g>
+
+            <!-- Window Label -->
+            <text x="530" y="236" font-size="13" font-weight="700" fill="#0f172a">Window</text>
+            <text x="530" y="253" font-size="12" font-weight="500" fill="#334155">(3 ft to 7 ft)</text>
+
+            <!-- Overhang Start Dot (515, 120) -->
+            <line x1="395" y1="76" x2="508" y2="117" stroke="#0f172a" stroke-width="1.5" />
+            <polygon points="511,118 501,119 504,111" fill="#0f172a" />
+            <text x="390" y="70" text-anchor="end" font-size="13" font-weight="700" fill="#0f172a">Overhang starts here</text>
+            <text x="390" y="86" text-anchor="end" font-size="12" font-weight="500" fill="#334155">(top of wall, 8 ft)</text>
+            <circle cx="515" cy="120" r="5.5" fill="#0f172a" />
+          </g>
+
+          <!-- Layer 0: Completed Previous Trials (Ghost Trails) -->
+          <g id="ghost-layer"></g>
+
+          <!-- Layer 1: Active Trial Overhang & Rays -->
+          <g id="active-rays-layer"></g>
+          <g id="active-overhang-layer"></g>
+
+          <!-- Layer 2: Protractor Tool -->
+          <g id="protractor-layer" class="protractor-shadow"></g>
+
+          <!-- Layer 3: Ruler & Pencil Tools -->
+          <g id="tools-layer" class="tool-shadow"></g>
+
+          <!-- Layer 4: Callout Badges & Impact Dots -->
+          <g id="annotations-layer"></g>
+        </svg>
+      </div>
+
+      <!-- Playback & Speed Controls Bar -->
+      <div class="bg-slate-100 border-t border-slate-200 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button id="btn-prev" onclick="prevSubStep()" class="px-2.5 py-1.5 rounded-xl bg-white border border-slate-300 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-50 active:scale-95 transition cursor-pointer">
+            ← Prev
+          </button>
+          <button id="btn-play-pause" onclick="togglePlay()" class="px-3.5 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs sm:text-sm hover:bg-blue-700 active:scale-95 transition shadow-sm cursor-pointer flex items-center gap-1.5 min-w-[96px] justify-center">
+            <span id="play-icon">⏸</span> <span id="play-text">Pause</span>
+          </button>
+          <button id="btn-next" onclick="nextSubStep()" class="px-2.5 py-1.5 rounded-xl bg-white border border-slate-300 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-50 active:scale-95 transition cursor-pointer">
+            Next →
+          </button>
+          <button onclick="replaySubStep()" title="Replay current step" class="px-2.5 py-1.5 rounded-xl bg-white border border-slate-300 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-50 active:scale-95 transition cursor-pointer">
+            ↻ Replay
+          </button>
+        </div>
+
+        <!-- Speed Control -->
+        <div class="flex items-center gap-1 bg-white px-2 py-1 rounded-xl border border-slate-300 text-xs font-bold">
+          <span class="text-slate-500 mr-1">Speed:</span>
+          <button id="spd-0.75" onclick="setSpeed(0.75)" class="px-2 py-0.5 rounded-lg text-slate-600 hover:bg-slate-100 cursor-pointer">0.75x</button>
+          <button id="spd-1" onclick="setSpeed(1)" class="px-2 py-0.5 rounded-lg bg-slate-900 text-white cursor-pointer">1x</button>
+          <button id="spd-1.5" onclick="setSpeed(1.5)" class="px-2 py-0.5 rounded-lg text-slate-600 hover:bg-slate-100 cursor-pointer">1.5x</button>
+        </div>
+
+        <!-- Sub-step Progress Pills (6 sub-steps per trial) -->
+        <div class="flex items-center gap-1" aria-label="Sub-step Progress">
+          <button onclick="goToSubStep(0)" id="dot-0" class="w-6 h-2.5 rounded-full bg-blue-600 cursor-pointer" title="1A: Draw Overhang"></button>
+          <button onclick="goToSubStep(1)" id="dot-1" class="w-6 h-2.5 rounded-full bg-slate-300 cursor-pointer" title="2B: Place Protractor"></button>
+          <button onclick="goToSubStep(2)" id="dot-2" class="w-6 h-2.5 rounded-full bg-slate-300 cursor-pointer" title="3C: Mark 71° June"></button>
+          <button onclick="goToSubStep(3)" id="dot-3" class="w-6 h-2.5 rounded-full bg-slate-300 cursor-pointer" title="3D: Mark 24° Dec"></button>
+          <button onclick="goToSubStep(4)" id="dot-4" class="w-6 h-2.5 rounded-full bg-slate-300 cursor-pointer" title="4E: Draw Sun Rays"></button>
+          <button onclick="goToSubStep(5)" id="dot-5" class="w-6 h-2.5 rounded-full bg-slate-300 cursor-pointer" title="5F: Record Table"></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: Clarified Student Directions & Full Question 3 Data Table (5 cols) -->
+    <aside class="lg:col-span-5 flex flex-col gap-4">
+
+      <!-- Clarified Student Directions Panel -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-1.5">
+            <span>📋</span> Part 2: Clarified Student Directions
+          </h2>
+          <span id="active-tool-pill" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-900">
+            Regular Pencil
+          </span>
+        </div>
+
+        <!-- Scale Reminder -->
+        <div class="mb-2.5 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-xs text-slate-700 flex flex-wrap items-center justify-between gap-1">
+          <span><strong>Scale:</strong> 2 small squares = 1 ft</span>
+          <span><strong>Window:</strong> 3 ft to 7 ft</span>
+          <span><strong>Goal:</strong> June = None, Dec = All</span>
+        </div>
+
+        <!-- 5 Clarified Steps -->
+        <div id="directions-list" class="space-y-1.5"></div>
+
+        <!-- Common Mistake Callout -->
+        <div id="mistake-alert" class="mt-3 rounded-xl bg-amber-50 border border-amber-300 p-3 flex items-start gap-2.5">
+          <span class="text-lg leading-none mt-0.5">⚠️</span>
+          <div>
+            <h3 id="alert-title" class="text-xs font-extrabold text-amber-950">Protractor Tip</h3>
+            <p id="alert-body" class="text-xs text-amber-900 mt-0.5 leading-relaxed"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Complete Question 3 Worksheet Data Table (All 3 Trials) -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-sm sm:text-base font-extrabold text-slate-900">📊 Question 3 Data Table (Auto-Filling)</h2>
+          <button onclick="resetTable()" class="text-xs font-semibold text-slate-500 hover:text-slate-800 underline cursor-pointer">Reset Table</button>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-800 border-b border-slate-200">
+                <th class="py-2 px-2 font-extrabold">Overhang</th>
+                <th class="py-2 px-2 font-extrabold">June Hits</th>
+                <th class="py-2 px-2 font-extrabold">June Sun?</th>
+                <th class="py-2 px-2 font-extrabold">Dec Hits</th>
+                <th class="py-2 px-2 font-extrabold">Dec Sun?</th>
+                <th class="py-2 px-2 font-extrabold text-center">Works? (J / D)</th>
+              </tr>
+            </thead>
+            <tbody id="q3-table-body" class="divide-y divide-slate-200">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <div id="verdict-banner" class="mt-2.5 rounded-xl px-3 py-2 text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+          Watch all 3 trials (1 ft → 3 ft → 2 ft) to see why a 2 ft overhang solves the design problem!
+        </div>
+      </div>
+
+    </aside>
+  </main>
+
+  <script>
+    // =========================================================================
+    // 1. GEOMETRY & TRIAL CONFIGURATION (1 ft -> 3 ft -> 2 ft)
+    // =========================================================================
+    const WALL_X = 515;
+    const TOP_WALL_Y = 120; // 8 ft
+    const GROUND_Y = 440;   // 0 ft
+    const PX_PER_FT = 40;   // 1 small square (0.5 ft) = 20 px
+    const GRID_LEFT_X = 75;
+    const GRID_TOP_Y = 40;
+
+    const WINDOW_TOP_FT = 7.0;
+    const WINDOW_BOT_FT = 3.0;
+
+    // Exact sequence: Trial 1 = 1 ft (Pencil), Trial 2 = 3 ft (Blue), Trial 3 = 2 ft (Purple)
+    const TRIAL_SEQUENCE = [
+      {
+        index: 0,
+        ft: 1,
+        squares: 2,
+        label: "1 ft",
+        toolName: "Regular Pencil",
+        color: "#334155",       // Graphite pencil
+        pencilBody: "#facc15",  // Yellow #2 pencil barrel
+        juneHitText: "5.1 ft",
+        juneSunText: "some",
+        junePass: false,
+        decHitText: "7.6 ft",
+        decSunText: "all",
+        decPass: true,
+        summary: "1 ft is TOO SHORT: June sun hits the wall at 5.1 ft, shining on the lower window and overheating the house."
+      },
+      {
+        index: 1,
+        ft: 3,
+        squares: 6,
+        label: "3 ft",
+        toolName: "Blue Colored Pencil",
+        color: "#2563eb",       // Blue colored pencil
+        pencilBody: "#3b82f6",
+        juneHitText: "ground",
+        juneSunText: "none",
+        junePass: true,
+        decHitText: "6.7 ft",
+        decSunText: "some",
+        decPass: false,
+        summary: "3 ft is TOO LONG: It blocks June sun (hits ground), but in December it blocks the top of the window (6.7–7 ft)."
+      },
+      {
+        index: 2,
+        ft: 2,
+        squares: 4,
+        label: "My design: 2 ft",
+        toolName: "Purple Colored Pencil",
+        color: "#7c3aed",       // Purple colored pencil
+        pencilBody: "#8b5cf6",
+        juneHitText: "2.2 ft",
+        juneSunText: "none",
+        junePass: true,
+        decHitText: "7.1 ft",
+        decSunText: "all",
+        decPass: true,
+        summary: "2 ft is JUST RIGHT! June hits at 2.2 ft (below window = 0% summer sun) and December hits at 7.1 ft (above window = 100% winter sun)!"
+      }
+    ];
+
+    // 6 Sub-steps per trial (A through F)
+    const SUBSTEPS = [
+      {
+        id: "1A",
+        parentStep: 1,
+        duration: 2100,
+        caption: "Align ruler at 8 ft & draw overhang left",
+        alertTitle: "Count Grid Squares Carefully",
+        alertBody: "2 small squares = 1 ft. Start at the black dot (8 ft) and draw straight left along the 8 ft grid line."
+      },
+      {
+        id: "2B",
+        parentStep: 2,
+        duration: 2300,
+        caption: "Flip protractor upside-down & snap center to overhang tip",
+        alertTitle: "Most Common Mistake!",
+        alertBody: "Put the protractor center hole on the OUTER LEFT TIP of the overhang — NOT on the house wall! Align 0° on the right along the overhang."
+      },
+      {
+        id: "3C",
+        parentStep: 3,
+        duration: 2400,
+        caption: "Count 71° down from 0° right edge → make June dot",
+        alertTitle: "Measure Clockwise Downward from Right 0° Edge",
+        alertBody: "Start at 0° on the right flat edge (along the overhang toward the house) and count 71° downward. Make a glowing amber dot."
+      },
+      {
+        id: "3D",
+        parentStep: 3,
+        duration: 2400,
+        caption: "Without moving protractor, count 24° down → make Dec dot",
+        alertTitle: "Keep Protractor Centered on Tip",
+        alertBody: "Leave the center hole on the overhang tip. Count 24° downward from the same right 0° flat edge and make an orange/red dot."
+      },
+      {
+        id: "4E",
+        parentStep: 4,
+        duration: 3200,
+        caption: "Use ruler to connect tip through dots to wall/ground",
+        alertTitle: "Extend Rays All the Way to the Wall",
+        alertBody: "Remove the protractor. Line up your ruler from the overhang tip through each dot until the line hits the wall or green ground."
+      },
+      {
+        id: "5F",
+        parentStep: 5,
+        duration: 2200,
+        caption: "Read wall heights (Below = IN SUN, Above = IN SHADE)",
+        alertTitle: "Check the Window (3 ft to 7 ft)",
+        alertBody: "Below the ray = IN SUN. Above the ray = IN SHADE. Record where each line hits the wall in Question 3."
+      }
+    ];
+
+    // 5 Clarified Student Directions
+    const CLARIFIED_DIRECTIONS = [
+      {
+        step: 1,
+        title: "1. Draw the Roof Overhang (Horizontal Line)",
+        html: `Start at the black dot at <strong>8 ft</strong> and use a ruler to draw straight <strong>left (South)</strong>: <strong>2 squares</strong> (1 ft, pencil), <strong>6 squares</strong> (3 ft, blue), then <strong>4 squares</strong> (2 ft, purple).`
+      },
+      {
+        step: 2,
+        title: "2. Place Your Protractor Upside-Down",
+        html: `Flip the protractor so the <strong>curved edge faces DOWN</strong> and flat edge is on TOP. Put the <strong>center hole on the outer left tip</strong> of the overhang (NOT the wall) with <strong>0° on the right</strong> along the overhang.`
+      },
+      {
+        step: 3,
+        title: "3. Measure & Mark Both Sun Angles",
+        html: `Count <strong>clockwise downward</strong> from the <strong>right 0° flat edge</strong> (toward the house wall): mark a dot at <strong>71° (June)</strong>, then without moving the protractor, mark a dot at <strong>24° (December)</strong>.`
+      },
+      {
+        step: 4,
+        title: "4. Draw Sunlight Rays to the House",
+        html: `Remove the protractor. Use a ruler to connect the <strong>overhang tip through your 71° dot</strong> to the wall/ground (label <strong>June</strong>), then through your <strong>24° dot</strong> to the wall (label <strong>Dec</strong>).`
+      },
+      {
+        step: 5,
+        title: "5. Read Your Results for the Table",
+        html: `<strong>Below line = IN SUN</strong> | <strong>Above line = IN SHADE</strong>. At/below 3 ft (or ground) = <em>none</em>; between 3–7 ft = <em>some</em>; at/above 7 ft = <em>all</em>.`
+      }
+    ];
+
+    // =========================================================================
+    // 2. PLAYBACK STATE
+    // =========================================================================
+    let trialIdx = 0;         // 0 (1 ft), 1 (3 ft), 2 (2 ft)
+    let subStepIdx = 0;       // 0 to 5
+    let progress = 0;         // 0.0 to 1.0
+    let isPlaying = true;
+    let autoSequenceAll = true;
+    let playbackSpeed = 1.0;
+    let lastTimestamp = null;
+    let pauseTimer = 0;
+    let completedTrials = new Set();
+
+    const HOLD_BETWEEN_STEPS_MS = 950;
+
+    // =========================================================================
+    // 3. STATIC GRID SETUP
+    // =========================================================================
+    function initStaticGrid() {
+      const gridLayer = document.getElementById("grid-layer");
+      const grassLayer = document.getElementById("grass-blades");
+      let gridHTML = "";
+
+      for (let i = 0; i <= 22; i++) {
+        const x = GRID_LEFT_X + i * 20;
+        const isFoot = i % 2 === 0;
+        gridHTML += `<line x1="${x}" y1="${GRID_TOP_Y}" x2="${x}" y2="${GROUND_Y}" stroke="${isFoot ? '#cbd5e1' : '#e2e8f0'}" stroke-width="${isFoot ? 1.1 : 0.7}" />`;
+      }
+
+      for (let j = 0; j <= 20; j++) {
+        const y = GRID_TOP_Y + j * 20;
+        const ftVal = 10 - j * 0.5;
+        const isFoot = Number.isInteger(ftVal);
+        gridHTML += `<line x1="${GRID_LEFT_X}" y1="${y}" x2="${WALL_X}" y2="${y}" stroke="${isFoot ? '#cbd5e1' : '#e2e8f0'}" stroke-width="${isFoot ? 1.1 : 0.7}" />`;
+
+        if (isFoot) {
+          gridHTML += `<line x1="${GRID_LEFT_X - 5}" y1="${y}" x2="${GRID_LEFT_X}" y2="${y}" stroke="#0f172a" stroke-width="1.5" />`;
+          gridHTML += `<text x="${GRID_LEFT_X - 10}" y="${y + 4}" text-anchor="end" font-size="12" font-weight="700" fill="#1e293b">${ftVal}</text>`;
+        }
+      }
+
+      gridHTML += `<line x1="${GRID_LEFT_X}" y1="${GRID_TOP_Y}" x2="${GRID_LEFT_X}" y2="${GROUND_Y}" stroke="#0f172a" stroke-width="1.5" />`;
+      gridHTML += `<text x="26" y="240" text-anchor="middle" font-size="14" font-weight="800" fill="#0f172a" transform="rotate(-90, 26, 240)">Height (feet)</text>`;
+      gridLayer.innerHTML = gridHTML;
+
+      let grassHTML = "";
+      for (let gx = 92; gx <= 500; gx += 26) {
+        grassHTML += `<polyline points="${gx - 5},440 ${gx},430 ${gx + 5},440" fill="none" stroke="#5c8236" stroke-width="1.5" stroke-linejoin="round" />`;
+      }
+      grassLayer.innerHTML = grassHTML;
+    }
+
+    // =========================================================================
+    // 4. RAY GEOMETRY & TOOL SVG BUILDERS
+    // =========================================================================
+    function getRayCoords(overhangFt, angleDeg) {
+      const tipX = WALL_X - overhangFt * PX_PER_FT;
+      const tipY = TOP_WALL_Y;
+      const rad = (angleDeg * Math.PI) / 180;
+      const tanVal = Math.tan(rad);
+      const hitWallFt = 8.0 - overhangFt * tanVal;
+
+      if (hitWallFt >= 0) {
+        return {
+          hitsGround: false,
+          hitFt: hitWallFt,
+          tipX,
+          tipY,
+          endX: WALL_X,
+          endY: GROUND_Y - hitWallFt * PX_PER_FT
+        };
+      } else {
+        const runFt = 8.0 / tanVal;
+        return {
+          hitsGround: true,
+          hitFt: 0,
+          tipX,
+          tipY,
+          endX: tipX + runFt * PX_PER_FT,
+          endY: GROUND_Y
+        };
+      }
+    }
+
+    // Angle measured clockwise downward from right 0° edge (cos(a), sin(a))
+    function getDotCoordsOnProtractor(tipX, tipY, angleDeg, radius = 135) {
+      const rad = (angleDeg * Math.PI) / 180;
+      return {
+        x: tipX + radius * Math.cos(rad),
+        y: tipY + radius * Math.sin(rad)
+      };
+    }
+
+    function easeOutCubic(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+
+    // Realistic Acrylic/Wooden Straightedge Ruler SVG
+    function buildRulerSVG(x1, y1, x2, y2, opacity = 1) {
+      if (opacity <= 0.02) return "";
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.hypot(dx, dy);
+      const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+      const rulerW = Math.max(len + 40, 180);
+      const rulerH = 22;
+
+      let ticks = "";
+      for (let tx = 10; tx < rulerW - 10; tx += 10) {
+        const isMajor = tx % 20 === 0;
+        ticks += `<line x1="${tx}" y1="0" x2="${tx}" y2="${isMajor ? 8 : 4}" stroke="#78350f" stroke-width="1" />`;
+      }
+
+      return `
+        <g transform="translate(${x1}, ${y1}) rotate(${angleDeg})" opacity="${opacity.toFixed(2)}">
+          <rect x="-15" y="2" width="${rulerW}" height="${rulerH}" rx="3" fill="rgba(253, 230, 138, 0.88)" stroke="#b45309" stroke-width="1.5" />
+          ${ticks}
+        </g>
+      `;
+    }
+
+    // Animated Pencil SVG whose tip sits right at (tipX, tipY)
+    function buildPencilSVG(tipX, tipY, bodyColor, leadColor, opacity = 1) {
+      if (opacity <= 0.02) return "";
+      return `
+        <g transform="translate(${tipX}, ${tipY}) rotate(-32)" opacity="${opacity.toFixed(2)}">
+          <!-- Graphite / Colored Lead Tip -->
+          <polygon points="0,0 13,-4.5 13,4.5" fill="${leadColor}" />
+          <!-- Wood Cone -->
+          <polygon points="13,-4.5 26,-6.5 26,6.5 13,4.5" fill="#fde68a" stroke="#92400e" stroke-width="0.8" />
+          <!-- Pencil Barrel -->
+          <rect x="26" y="-6.5" width="76" height="13" fill="${bodyColor}" stroke="#1e293b" stroke-width="1" />
+          <line x1="26" y1="-2" x2="102" y2="-2" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" />
+          <!-- Ferrule & Eraser -->
+          <rect x="102" y="-6.5" width="8" height="13" fill="#cbd5e1" stroke="#334155" stroke-width="1" />
+          <rect x="110" y="-6.5" width="11" height="13" rx="2" fill="#f43f5e" stroke="#881337" stroke-width="1" />
+        </g>
+      `;
+    }
+
+    // Upside-Down Clear Semi-Circular Protractor SVG:
+    // 0° on the RIGHT flat edge (along overhang toward house wall), 90° at bottom, 180° on left
+    function buildProtractorSVG(cx, cy, opacity, show71Wedge, angle71Now, show24Wedge, angle24Now) {
+      if (opacity <= 0.02) return "";
+      const R = 135;
+      let ticks = "";
+
+      for (let deg = 0; deg <= 180; deg += 5) {
+        const rad = (deg * Math.PI) / 180;
+        const cosA = Math.cos(rad);
+        const sinA = Math.sin(rad);
+        const isMajor = deg % 10 === 0;
+        const innerR = isMajor ? R - 12 : R - 6;
+
+        const x1 = cx + innerR * cosA;
+        const y1 = cy + innerR * sinA;
+        const x2 = cx + R * cosA;
+        const y2 = cy + R * sinA;
+
+        ticks += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#0f172a" stroke-width="${isMajor ? 1.2 : 0.7}" />`;
+
+        if (deg % 10 === 0 && deg >= 10 && deg <= 170) {
+          const labelR = R - 23;
+          const lx = cx + labelR * cosA;
+          const ly = cy + labelR * sinA + 3;
+          ticks += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-size="8.5" font-weight="700" fill="#0f172a">${deg}°</text>`;
+        }
+      }
+
+      // Highlight reference ticks at 24° and 71° on the right quadrant
+      [
+        { deg: 24, color: "#ea580c" },
+        { deg: 71, color: "#d97706" }
+      ].forEach(({ deg, color }) => {
+        const rad = (deg * Math.PI) / 180;
+        const x1 = cx + (R - 15) * Math.cos(rad);
+        const y1 = cy + (R - 15) * Math.sin(rad);
+        const x2 = cx + (R + 3) * Math.cos(rad);
+        const y2 = cy + (R + 3) * Math.sin(rad);
+        ticks += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${color}" stroke-width="2.2" />`;
+      });
+
+      // 71° June Wedge (sweeping clockwise downward from 0° right)
+      let wedge71 = "";
+      if (show71Wedge && angle71Now > 0) {
+        const rad = (angle71Now * Math.PI) / 180;
+        const ax = cx + R * Math.cos(rad);
+        const ay = cy + R * Math.sin(rad);
+        wedge71 = `
+          <path d="M ${cx} ${cy} L ${cx + R} ${cy} A ${R} ${R} 0 0 1 ${ax.toFixed(1)} ${ay.toFixed(1)} Z"
+                fill="#f59e0b" fill-opacity="0.28" stroke="#d97706" stroke-width="2" />
+          <text x="${(cx + (R + 22) * Math.cos(rad / 2)).toFixed(1)}"
+                y="${(cy + (R + 22) * Math.sin(rad / 2) + 4).toFixed(1)}"
+                text-anchor="middle" font-size="13" font-weight="800" fill="#b45309">${Math.round(angle71Now)}°</text>
+        `;
+      }
+
+      // 24° December Wedge (sweeping clockwise downward from 0° right)
+      let wedge24 = "";
+      if (show24Wedge && angle24Now > 0) {
+        const rad = (angle24Now * Math.PI) / 180;
+        const ax = cx + R * Math.cos(rad);
+        const ay = cy + R * Math.sin(rad);
+        wedge24 = `
+          <path d="M ${cx} ${cy} L ${cx + R} ${cy} A ${R} ${R} 0 0 1 ${ax.toFixed(1)} ${ay.toFixed(1)} Z"
+                fill="#f97316" fill-opacity="0.26" stroke="#ea580c" stroke-width="2" />
+          <text x="${(cx + (R + 24) * Math.cos(rad / 2)).toFixed(1)}"
+                y="${(cy + (R + 24) * Math.sin(rad / 2) + 4).toFixed(1)}"
+                text-anchor="middle" font-size="13" font-weight="800" fill="#c2410c">${Math.round(angle24Now)}°</text>
+        `;
+      }
+
+      return `
+        <g opacity="${opacity.toFixed(2)}">
+          <!-- Semi-Circular Body (Curved Side Down) -->
+          <path d="M ${cx - R} ${cy} L ${cx + R} ${cy} A ${R} ${R} 0 0 1 ${cx - R} ${cy} Z"
+                fill="rgba(224, 242, 254, 0.72)" stroke="#0284c7" stroke-width="2" />
+          <path d="M ${cx - R + 35} ${cy + 14} L ${cx + R - 35} ${cy + 14} A ${R - 35} ${R - 35} 0 0 1 ${cx - R + 35} ${cy + 14} Z"
+                fill="rgba(255, 255, 255, 0.55)" stroke="#7dd3fc" stroke-width="1" />
+          <!-- 0° Level Line on Right Side (along overhang toward house wall) -->
+          <line x1="${cx}" y1="${cy}" x2="${cx + R + 24}" y2="${cy}" stroke="#0284c7" stroke-width="2" stroke-dasharray="5,4" />
+          <text x="${cx + R + 6}" y="${cy - 7}" text-anchor="start" font-size="11" font-weight="800" fill="#0369a1">0° (Along overhang)</text>
+          <text x="${cx - R - 6}" y="${cy - 7}" text-anchor="end" font-size="10" font-weight="700" fill="#475569">180°</text>
+          ${ticks}
+          ${wedge71}
+          ${wedge24}
+          <!-- Center Hole Snap Indicator -->
+          <circle cx="${cx}" cy="${cy}" r="10" fill="none" stroke="#16a34a" stroke-width="2.5" class="pulse-ring" />
+          <circle cx="${cx}" cy="${cy}" r="4.5" fill="#16a34a" stroke="#ffffff" stroke-width="1.5" />
+          <rect x="${cx - 98}" y="${cy - 28}" width="196" height="19" rx="5" fill="#15803d" />
+          <text x="${cx}" y="${cy - 15}" text-anchor="middle" font-size="10" font-weight="800" fill="#ffffff">Center hole on overhang tip — NOT wall!</text>
+        </g>
+      `;
+    }
+
+    // =========================================================================
+    // 5. MAIN SCENE RENDERER
+    // =========================================================================
+    function renderScene() {
+      const trial = TRIAL_SEQUENCE[trialIdx];
+      const fullPx = trial.ft * PX_PER_FT;
+      const tipX = WALL_X - fullPx;
+      const tipY = TOP_WALL_Y;
+
+      const juneRay = getRayCoords(trial.ft, 71);
+      const decRay = getRayCoords(trial.ft, 24);
+      const dot71 = getDotCoordsOnProtractor(tipX, tipY, 71, 135);
+      const dot24 = getDotCoordsOnProtractor(tipX, tipY, 24, 135);
+
+      const p = easeOutCubic(progress);
+
+      // -----------------------------------------------------------------------
+      // A. GHOST TRAILS (Previously completed trials)
+      // -----------------------------------------------------------------------
+      const showGhost = document.getElementById("chk-ghost").checked;
+      let ghostHTML = "";
+      if (showGhost) {
+        completedTrials.forEach((cIdx) => {
+          if (cIdx === trialIdx) return;
+          const gt = TRIAL_SEQUENCE[cIdx];
+          const gTipX = WALL_X - gt.ft * PX_PER_FT;
+          const gJune = getRayCoords(gt.ft, 71);
+          const gDec = getRayCoords(gt.ft, 24);
+          ghostHTML += `
+            <g opacity="0.28">
+              <line x1="${WALL_X}" y1="${TOP_WALL_Y}" x2="${gTipX}" y2="${TOP_WALL_Y}" stroke="${gt.color}" stroke-width="5" stroke-linecap="round" />
+              <line x1="${gJune.tipX}" y1="${gJune.tipY}" x2="${gJune.endX}" y2="${gJune.endY}" stroke="#d97706" stroke-width="2" stroke-dasharray="5,4" />
+              <line x1="${gDec.tipX}" y1="${gDec.tipY}" x2="${gDec.endX}" y2="${gDec.endY}" stroke="#0284c7" stroke-width="2" />
+            </g>
+          `;
+        });
+      }
+      document.getElementById("ghost-layer").innerHTML = ghostHTML;
+
+      // -----------------------------------------------------------------------
+      // B. ACTIVE OVERHANG + SUB-STEP 1A RULER & PENCIL
+      // -----------------------------------------------------------------------
+      const overhangP = subStepIdx === 0 ? p : 1;
+      const currPx = fullPx * overhangP;
+      const currTipX = WALL_X - currPx;
+      const squaresDrawn = Math.round(trial.squares * overhangP);
+
+      let overhangHTML = `
+        <line x1="${WALL_X}" y1="${TOP_WALL_Y}" x2="${currTipX}" y2="${TOP_WALL_Y}"
+              stroke="${trial.color}" stroke-width="6" stroke-linecap="round" />
+        <circle cx="${currTipX}" cy="${TOP_WALL_Y}" r="4.5" fill="${trial.color}" />
+      `;
+
+      if (currPx > 8) {
+        const bY = TOP_WALL_Y - 14;
+        overhangHTML += `
+          <line x1="${currTipX}" y1="${bY}" x2="${WALL_X}" y2="${bY}" stroke="${trial.color}" stroke-width="1.5" />
+          <line x1="${currTipX}" y1="${bY - 4}" x2="${currTipX}" y2="${bY + 4}" stroke="${trial.color}" stroke-width="1.5" />
+          <line x1="${WALL_X}" y1="${bY - 4}" x2="${WALL_X}" y2="${bY + 4}" stroke="${trial.color}" stroke-width="1.5" />
+          <rect x="${(currTipX + WALL_X) / 2 - 54}" y="${bY - 22}" width="108" height="17" rx="4" fill="#ffffff" stroke="${trial.color}" stroke-width="1.2" />
+          <text x="${(currTipX + WALL_X) / 2}" y="${bY - 10}" text-anchor="middle" font-size="10.5" font-weight="800" fill="${trial.color}">
+            ${squaresDrawn} sq = ${(squaresDrawn * 0.5).toFixed(1)} ft
+          </text>
+        `;
+      }
+      document.getElementById("active-overhang-layer").innerHTML = overhangHTML;
+
+      // -----------------------------------------------------------------------
+      // C. PROTRACTOR & PENCIL DOTS (Sub-steps 2B, 3C, 3D)
+      // -----------------------------------------------------------------------
+      let protractorHTML = "";
+      let toolsHTML = "";
+      let annotationsHTML = "";
+
+      if (subStepIdx === 0) {
+        toolsHTML += buildRulerSVG(WALL_X + 10, TOP_WALL_Y + 24, WALL_X - 180, TOP_WALL_Y + 24, 0.92);
+        toolsHTML += buildPencilSVG(currTipX, TOP_WALL_Y, trial.pencilBody, trial.color, 1);
+      } else if (subStepIdx === 1) {
+        const startX = tipX - 95;
+        const startY = tipY + 60;
+        const px = startX + (tipX - startX) * p;
+        const py = startY + (tipY - startY) * p;
+        protractorHTML = buildProtractorSVG(px, py, p, false, 0, false, 0);
+      } else if (subStepIdx === 2) {
+        const angleNow = 71 * p;
+        protractorHTML = buildProtractorSVG(tipX, tipY, 1, true, angleNow, false, 0);
+        const currDot = getDotCoordsOnProtractor(tipX, tipY, angleNow, 135);
+        toolsHTML += buildPencilSVG(currDot.x, currDot.y, trial.pencilBody, "#f59e0b", 1);
+
+        if (p > 0.85) {
+          annotationsHTML += `
+            <g transform="translate(${dot71.x + 12}, ${dot71.y + 10})">
+              <rect x="0" y="-11" width="116" height="20" rx="5" fill="#fef3c7" stroke="#d97706" stroke-width="1.5" />
+              <text x="58" y="3" text-anchor="middle" font-size="10" font-weight="800" fill="#92400e">71° dot (June Sun)</text>
+            </g>
+          `;
+        }
+      } else if (subStepIdx === 3) {
+        const angleNow = 24 * p;
+        protractorHTML = buildProtractorSVG(tipX, tipY, 1, false, 0, true, angleNow);
+        const currDot = getDotCoordsOnProtractor(tipX, tipY, angleNow, 135);
+        toolsHTML += buildPencilSVG(currDot.x, currDot.y, trial.pencilBody, "#ea580c", 1);
+
+        if (p > 0.85) {
+          annotationsHTML += `
+            <g transform="translate(${dot24.x + 12}, ${dot24.y + 8})">
+              <rect x="0" y="-11" width="116" height="20" rx="5" fill="#ffedd5" stroke="#ea580c" stroke-width="1.5" />
+              <text x="58" y="3" text-anchor="middle" font-size="10" font-weight="800" fill="#9a3412">24° dot (Dec Sun)</text>
+            </g>
+          `;
+        }
+      }
+
+      // Persist glowing dots after they are marked (subStepIdx >= 2 for 71°, >= 3 for 24°)
+      if (subStepIdx >= 2) {
+        const dot71Opacity = subStepIdx === 2 ? Math.max(0, (p - 0.7) / 0.3) : 1;
+        if (dot71Opacity > 0) {
+          annotationsHTML += `
+            <circle cx="${dot71.x}" cy="${dot71.y}" r="8" fill="#facc15" fill-opacity="0.45" opacity="${dot71Opacity}" />
+            <circle cx="${dot71.x}" cy="${dot71.y}" r="4.8" fill="#f59e0b" stroke="#0f172a" stroke-width="1.5" opacity="${dot71Opacity}" />
+          `;
+        }
+      }
+      if (subStepIdx >= 3) {
+        const dot24Opacity = subStepIdx === 3 ? Math.max(0, (p - 0.7) / 0.3) : 1;
+        if (dot24Opacity > 0) {
+          annotationsHTML += `
+            <circle cx="${dot24.x}" cy="${dot24.y}" r="8" fill="#fb923c" fill-opacity="0.45" opacity="${dot24Opacity}" />
+            <circle cx="${dot24.x}" cy="${dot24.y}" r="4.8" fill="#ea580c" stroke="#0f172a" stroke-width="1.5" opacity="${dot24Opacity}" />
+          `;
+        }
+      }
+
+      document.getElementById("protractor-layer").innerHTML = protractorHTML;
+
+      // -----------------------------------------------------------------------
+      // D. RULER & PENCIL DRAWING SUN RAYS (Sub-steps 4E & 5F)
+      // -----------------------------------------------------------------------
+      let raysHTML = "";
+      let juneRayP = 0;
+      let decRayP = 0;
+
+      if (subStepIdx === 4) {
+        if (progress < 0.5) {
+          juneRayP = easeOutCubic(progress / 0.5);
+          const jx = juneRay.tipX + (juneRay.endX - juneRay.tipX) * juneRayP;
+          const jy = juneRay.tipY + (juneRay.endY - juneRay.tipY) * juneRayP;
+          toolsHTML += buildRulerSVG(juneRay.tipX, juneRay.tipY, juneRay.endX, juneRay.endY, 0.9);
+          toolsHTML += buildPencilSVG(jx, jy, trial.pencilBody, "#d97706", 1);
+        } else {
+          juneRayP = 1;
+          decRayP = easeOutCubic((progress - 0.5) / 0.5);
+          const dx = decRay.tipX + (decRay.endX - decRay.tipX) * decRayP;
+          const dy = decRay.tipY + (decRay.endY - decRay.tipY) * decRayP;
+          toolsHTML += buildRulerSVG(decRay.tipX, decRay.tipY, decRay.endX, decRay.endY, 0.9);
+          toolsHTML += buildPencilSVG(dx, dy, trial.pencilBody, "#0284c7", 1);
+        }
+      } else if (subStepIdx === 5) {
+        juneRayP = 1;
+        decRayP = 1;
+      }
+
+      if (juneRayP > 0) {
+        const jx = juneRay.tipX + (juneRay.endX - juneRay.tipX) * juneRayP;
+        const jy = juneRay.tipY + (juneRay.endY - juneRay.tipY) * juneRayP;
+        raysHTML += `<line x1="${juneRay.tipX}" y1="${juneRay.tipY}" x2="${jx}" y2="${jy}" stroke="#d97706" stroke-width="3" stroke-dasharray="7,4" />`;
+
+        if (juneRayP >= 0.98) {
+          const jText = juneRay.hitsGround ? "June (71°): ground" : `June (71°): ${trial.juneHitText}`;
+          const bx = juneRay.hitsGround ? juneRay.endX + 45 : juneRay.endX - 8;
+          const by = juneRay.hitsGround ? juneRay.endY - 14 : juneRay.endY;
+          annotationsHTML += `
+            <circle cx="${juneRay.endX}" cy="${juneRay.endY}" r="5.5" fill="#d97706" stroke="#ffffff" stroke-width="1.5" />
+            <g transform="translate(${bx}, ${by})">
+              <rect x="-126" y="-11" width="120" height="21" rx="5" fill="#fffbeb" stroke="#d97706" stroke-width="1.5" />
+              <text x="-66" y="3" text-anchor="middle" font-size="10.5" font-weight="800" fill="#92400e">${jText}</text>
+            </g>
+          `;
+        }
+      }
+
+      if (decRayP > 0) {
+        const dx = decRay.tipX + (decRay.endX - decRay.tipX) * decRayP;
+        const dy = decRay.tipY + (decRay.endY - decRay.tipY) * decRayP;
+        raysHTML += `<line x1="${decRay.tipX}" y1="${decRay.tipY}" x2="${dx}" y2="${dy}" stroke="#0284c7" stroke-width="3" />`;
+
+        if (decRayP >= 0.98) {
+          const dText = `Dec (24°): ${trial.decHitText}`;
+          annotationsHTML += `
+            <circle cx="${decRay.endX}" cy="${decRay.endY}" r="5.5" fill="#0284c7" stroke="#ffffff" stroke-width="1.5" />
+            <g transform="translate(${decRay.endX - 8}, ${decRay.endY})">
+              <rect x="-112" y="-11" width="106" height="21" rx="5" fill="#f0f9ff" stroke="#0284c7" stroke-width="1.5" />
+              <text x="-59" y="3" text-anchor="middle" font-size="10.5" font-weight="800" fill="#075985">${dText}</text>
+            </g>
+          `;
+        }
+      }
+
+      document.getElementById("active-rays-layer").innerHTML = raysHTML;
+      document.getElementById("tools-layer").innerHTML = toolsHTML;
+      document.getElementById("annotations-layer").innerHTML = annotationsHTML;
+
+      // -----------------------------------------------------------------------
+      // E. WINDOW SHADE / SUNLIGHT VISUALIZATION
+      // -----------------------------------------------------------------------
+      let winHTML = "";
+      if (juneRayP >= 0.98 && decRayP < 0.98) {
+        winHTML = renderSingleSeasonWindow(juneRay);
+      } else if (decRayP >= 0.98) {
+        winHTML = renderSplitWindow(juneRay, decRay);
+        if (!completedTrials.has(trialIdx)) {
+          completedTrials.add(trialIdx);
+          renderQ3Table();
+        }
+      }
+      document.getElementById("window-lighting-layer").innerHTML = winHTML;
+    }
+
+    function getSunBoundsOnWindow(ray) {
+      if (ray.hitsGround || ray.hitFt <= WINDOW_BOT_FT) {
+        return { sunTopFt: 3, sunBotFt: 3 };
+      } else if (ray.hitFt >= WINDOW_TOP_FT) {
+        return { sunTopFt: 7, sunBotFt: 3 };
+      } else {
+        return { sunTopFt: ray.hitFt, sunBotFt: 3 };
+      }
+    }
+
+    function renderSingleSeasonWindow(ray) {
+      const { sunTopFt, sunBotFt } = getSunBoundsOnWindow(ray);
+      const sunTopY = GROUND_Y - sunTopFt * PX_PER_FT;
+      const sunH = (sunTopFt - sunBotFt) * PX_PER_FT;
+      const shadeH = 160 - sunH;
+      return `
+        ${shadeH > 0 ? `<rect x="510" y="161" width="10" height="${shadeH}" fill="url(#shade-pattern)" />` : ""}
+        ${sunH > 0 ? `<rect x="510" y="${sunTopY}" width="10" height="${sunH}" fill="#facc15" />` : ""}
+      `;
+    }
+
+    function renderSplitWindow(juneRay, decRay) {
+      const j = getSunBoundsOnWindow(juneRay);
+      const d = getSunBoundsOnWindow(decRay);
+
+      const jSunTopY = GROUND_Y - j.sunTopFt * PX_PER_FT;
+      const jSunH = (j.sunTopFt - j.sunBotFt) * PX_PER_FT;
+      const jShadeH = 160 - jSunH;
+
+      const dSunTopY = GROUND_Y - d.sunTopFt * PX_PER_FT;
+      const dSunH = (d.sunTopFt - d.sunBotFt) * PX_PER_FT;
+      const dShadeH = 160 - dSunH;
+
+      return `
+        ${jShadeH > 0 ? `<rect x="510" y="161" width="5" height="${jShadeH}" fill="url(#shade-pattern)" />` : ""}
+        ${jSunH > 0 ? `<rect x="510" y="${jSunTopY}" width="5" height="${jSunH}" fill="#facc15" />` : ""}
+        ${dShadeH > 0 ? `<rect x="515" y="161" width="5" height="${dShadeH}" fill="url(#shade-pattern)" />` : ""}
+        ${dSunH > 0 ? `<rect x="515" y="${dSunTopY}" width="5" height="${dSunH}" fill="#facc15" />` : ""}
+        <line x1="515" y1="160" x2="515" y2="320" stroke="#0f172a" stroke-width="1" />
+      `;
+    }
+
+    // =========================================================================
+    // 6. UI, DIRECTIONS & DATA TABLE UPDATES
+    // =========================================================================
+    function updateUI() {
+      const trial = TRIAL_SEQUENCE[trialIdx];
+      const sub = SUBSTEPS[subStepIdx];
+
+      TRIAL_SEQUENCE.forEach((t, idx) => {
+        const tab = document.getElementById(`tab-trial-${idx}`);
+        if (idx === trialIdx) {
+          tab.className = "px-2.5 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer bg-amber-400 text-slate-950 shadow";
+        } else {
+          tab.className = "px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer text-slate-300 hover:bg-slate-700";
+        }
+      });
+
+      document.getElementById("trial-badge").textContent = `Trial ${trialIdx + 1} of 3: ${trial.ft} ft`;
+      document.getElementById("substep-badge").textContent = `Step ${sub.id}`;
+      document.getElementById("live-caption").textContent = sub.caption;
+      document.getElementById("active-tool-pill").textContent = trial.toolName;
+
+      const dirContainer = document.getElementById("directions-list");
+      dirContainer.innerHTML = CLARIFIED_DIRECTIONS.map((d) => {
+        const isActive = d.step === sub.parentStep;
+        const isDone = d.step < sub.parentStep;
+        return `
+          <div onclick="jumpToParentStep(${d.step})"
+               class="rounded-xl p-2.5 border transition cursor-pointer ${
+                 isActive
+                   ? "bg-blue-50 border-blue-400 shadow-xs"
+                   : isDone
+                   ? "bg-slate-50 border-slate-200 opacity-85"
+                   : "bg-white border-slate-200 opacity-65 hover:opacity-95"
+               }">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold ${isActive ? "text-blue-950" : "text-slate-800"}">
+                ${isDone ? "✅ " : ""}${d.title}
+              </span>
+              ${isActive ? '<span class="text-[10px] font-extrabold uppercase text-blue-600">Active</span>' : ""}
+            </div>
+            ${isActive ? `<p class="text-xs text-slate-700 mt-1 leading-relaxed">${d.html}</p>` : ""}
+          </div>
+        `;
+      }).join("");
+
+      document.getElementById("alert-title").textContent = sub.alertTitle;
+      document.getElementById("alert-body").textContent = sub.alertBody;
+
+      for (let i = 0; i < 6; i++) {
+        const dot = document.getElementById(`dot-${i}`);
+        dot.className =
+          i === subStepIdx
+            ? "w-6 h-2.5 rounded-full bg-blue-600 transition cursor-pointer"
+            : i < subStepIdx
+            ? "w-6 h-2.5 rounded-full bg-blue-300 transition cursor-pointer"
+            : "w-6 h-2.5 rounded-full bg-slate-300 transition cursor-pointer";
+      }
+
+      document.getElementById("play-icon").textContent = isPlaying ? "⏸" : "▶";
+      document.getElementById("play-text").textContent = isPlaying ? "Pause" : "Play";
+
+      renderQ3Table();
+    }
+
+    function renderQ3Table() {
+      const tbody = document.getElementById("q3-table-body");
+      tbody.innerHTML = TRIAL_SEQUENCE.map((t, idx) => {
+        const isFilled = completedTrials.has(idx);
+        const isCurrent = idx === trialIdx;
+        const rowBg = isCurrent ? "bg-amber-50/60" : "bg-white";
+
+        if (!isFilled) {
+          return `
+            <tr class="${rowBg}">
+              <td class="py-2 px-2 font-bold text-slate-800">${t.label}</td>
+              <td class="py-2 px-2 text-slate-400">—</td>
+              <td class="py-2 px-2 text-slate-400">—</td>
+              <td class="py-2 px-2 text-slate-400">—</td>
+              <td class="py-2 px-2 text-slate-400">—</td>
+              <td class="py-2 px-2 text-center text-slate-400">—</td>
+            </tr>
+          `;
+        }
+
+        const jBadge = t.junePass
+          ? `<span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">Y</span>`
+          : `<span class="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 font-bold">N</span>`;
+        const dBadge = t.decPass
+          ? `<span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">Y</span>`
+          : `<span class="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 font-bold">N</span>`;
+
+        return `
+          <tr class="${rowBg}">
+            <td class="py-2 px-2 font-extrabold" style="color:${t.color}">${t.label}</td>
+            <td class="py-2 px-2 font-mono font-bold text-amber-700">${t.juneHitText}</td>
+            <td class="py-2 px-2 font-semibold">${t.juneSunText}</td>
+            <td class="py-2 px-2 font-mono font-bold text-sky-700">${t.decHitText}</td>
+            <td class="py-2 px-2 font-semibold">${t.decSunText}</td>
+            <td class="py-2 px-2 text-center space-x-1">${jBadge} ${dBadge}</td>
+          </tr>
+        `;
+      }).join("");
+
+      const banner = document.getElementById("verdict-banner");
+      if (completedTrials.has(trialIdx)) {
+        const activeT = TRIAL_SEQUENCE[trialIdx];
+        const bothPass = activeT.junePass && activeT.decPass;
+        banner.className = bothPass
+          ? "mt-2.5 rounded-xl px-3 py-2 text-xs font-semibold bg-emerald-50 text-emerald-950 border border-emerald-300"
+          : "mt-2.5 rounded-xl px-3 py-2 text-xs font-semibold bg-amber-50 text-amber-950 border border-amber-300";
+        banner.textContent = activeT.summary;
+      } else {
+        banner.className = "mt-2.5 rounded-xl px-3 py-2 text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200";
+        banner.textContent = "Watch all 3 trials (1 ft → 3 ft → 2 ft) to see why a 2 ft overhang solves the design problem!";
+      }
+    }
+
+    // =========================================================================
+    // 7. CONTROLS & SEQUENTIAL PLAYBACK ENGINE
+    // =========================================================================
+    function startFullSequence() {
+      completedTrials.clear();
+      trialIdx = 0;
+      subStepIdx = 0;
+      progress = 0;
+      pauseTimer = 0;
+      autoSequenceAll = true;
+      isPlaying = true;
+      updateUI();
+      renderScene();
+    }
+
+    function jumpToTrial(idx) {
+      trialIdx = idx;
+      subStepIdx = 0;
+      progress = 0;
+      pauseTimer = 0;
+      isPlaying = true;
+      updateUI();
+      renderScene();
+    }
+
+    function goToSubStep(sIdx) {
+      subStepIdx = Math.max(0, Math.min(5, sIdx));
+      progress = 0;
+      pauseTimer = 0;
+      updateUI();
+      renderScene();
+    }
+
+    function jumpToParentStep(parentStep) {
+      const map = { 1: 0, 2: 1, 3: 2, 4: 4, 5: 5 };
+      goToSubStep(map[parentStep] ?? 0);
+    }
+
+    function nextSubStep() {
+      if (subStepIdx < 5) {
+        goToSubStep(subStepIdx + 1);
+      } else if (trialIdx < 2) {
+        completedTrials.add(trialIdx);
+        jumpToTrial(trialIdx + 1);
+      }
+    }
+
+    function prevSubStep() {
+      if (subStepIdx > 0) {
+        goToSubStep(subStepIdx - 1);
+      } else if (trialIdx > 0) {
+        trialIdx--;
+        subStepIdx = 5;
+        progress = 0;
+        pauseTimer = 0;
+        updateUI();
+        renderScene();
+      }
+    }
+
+    function replaySubStep() {
+      progress = 0;
+      pauseTimer = 0;
+      isPlaying = true;
+      updateUI();
+      renderScene();
+    }
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      if (isPlaying && trialIdx === 2 && subStepIdx === 5 && progress >= 1) {
+        startFullSequence();
+        return;
+      }
+      updateUI();
+    }
+
+    function setSpeed(spd) {
+      playbackSpeed = spd;
+      [0.75, 1, 1.5].forEach((val) => {
+        const btn = document.getElementById(`spd-${val}`);
+        btn.className =
+          val === spd
+            ? "px-2 py-0.5 rounded-lg bg-slate-900 text-white cursor-pointer"
+            : "px-2 py-0.5 rounded-lg text-slate-600 hover:bg-slate-100 cursor-pointer";
+      });
+    }
+
+    function resetTable() {
+      completedTrials.clear();
+      renderQ3Table();
+    }
+
+    function animationLoop(timestamp) {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const dt = (timestamp - lastTimestamp) * playbackSpeed;
+      lastTimestamp = timestamp;
+
+      if (isPlaying) {
+        const dur = SUBSTEPS[subStepIdx].duration;
+        if (progress < 1) {
+          progress = Math.min(1, progress + dt / dur);
+          renderScene();
+        } else {
+          pauseTimer += dt;
+          if (pauseTimer >= HOLD_BETWEEN_STEPS_MS) {
+            pauseTimer = 0;
+            if (subStepIdx < 5) {
+              subStepIdx++;
+              progress = 0;
+              updateUI();
+              renderScene();
+            } else if (autoSequenceAll && trialIdx < 2) {
+              completedTrials.add(trialIdx);
+              trialIdx++;
+              subStepIdx = 0;
+              progress = 0;
+              updateUI();
+              renderScene();
+            } else {
+              completedTrials.add(trialIdx);
+              isPlaying = false;
+              updateUI();
+              renderScene();
+            }
+          }
+        }
+      }
+
+      requestAnimationFrame(animationLoop);
+    }
+
+    window.onload = function () {
+      initStaticGrid();
+      updateUI();
+      renderScene();
+      requestAnimationFrame(animationLoop);
+    };
+  </script>
+</body>
+</html>
